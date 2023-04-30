@@ -1,0 +1,231 @@
+import student.tetris2.*;
+import java.util.Arrays;
+//-------------------------------------------------------------------------
+/**
+ *  Tetris board that provides methods for tetris features. 
+ *
+ *  @author dwaldon
+ *  @version 2023.04.09
+ */
+public class StudentBoard implements Board
+{
+    //~ Fields ................................................................
+    private int width;
+    private int height;
+    private int[] columnHeights;
+    private int[] blocksInAllRows;
+    private boolean[][] grid;
+
+    //~ Constructor ...........................................................
+    // ----------------------------------------------------------
+    /**
+     * Initializes a newly created StudentBoard object.
+     * 
+     * @param width Width of the board
+     * 
+     * @param height Height of the board
+     */
+    public StudentBoard(int width, int height)
+    {
+        super();
+        this.width = width;
+        this.height = height;
+        this.columnHeights = new int[width];
+        this.blocksInAllRows = new int[height];
+        this.grid = new boolean[width][height];
+    }
+
+    //~ Methods ...............................................................
+    /**
+     * Returns the width of the board in blocks
+     * 
+     * @return int for width of the board
+     */
+    public int getWidth()
+    {
+        return this.width;
+    }
+
+    /**
+     * Returns the height of the board in blocks.
+     * 
+     * @return int for the height of the board
+     */
+    public int getHeight()
+    {
+        return this.height;
+    }
+
+    /**
+     * Returns an array of the heights of all columns, which is
+     * the y value of the highest block + 1 in each column.
+     * The height is 0 if the column contains no blocks.
+     *
+     * @return an array of the column heights for all columns.
+     */
+    public int[] getColumnHeights()
+    {
+        return columnHeights;
+    }
+
+    /**
+     * Returns an array with one entry per row indicating the number of filled
+     * blocks in the given row.
+     *
+     * @return An array representing the number of blocks filled in each row.
+     */
+    public int[] getBlocksInAllRows()
+    {
+        return blocksInAllRows;
+    }
+
+    /**
+     * Returns true if the given block is filled in the board.
+     * Blocks outside of the valid width/height area
+     * always return true.
+     *
+     * @param point The location to check.
+     * @return True if there is a block at the specified (x, y) position.
+     */
+    public boolean hasBlockAt(Point point)
+    {
+        int x = point.getX();
+        int y = point.getY();
+        boolean outOfWidth = x < 0 || x >= width;
+        boolean outOfHeight = y < 0 || y >= height;
+        if (outOfWidth || outOfHeight)
+        {
+            return true;
+        }
+        else
+        {
+            return grid[x][y];
+        }
+    }
+    
+    /**
+     * If the given place is okay
+     */
+    public static final int PLACE_OK = 0;
+    /**
+     * If the given place is filled
+     */
+    public static final int PLACE_ROW_FILLED = 1;
+    /**
+     * If the given place is out of bounds of the grid/board
+     */
+    public static final int PLACE_OUT_BOUNDS = 2;
+    /**
+     * If the given place is is filled
+     */
+    public static final int PLACE_BAD = 3;
+    /**
+     * Attempts to add the body of a piece to the board.
+     * Copies the piece blocks into the board grid.
+     * Returns PLACE_OK for a regular placement, or PLACE_ROW_FILLED
+     * for a regular placement that causes at least one row to be filled.
+     *
+     * Error cases:
+     * If part of the piece would fall out of bounds, the placement
+     * does not change the board at all, and PLACE_OUT_BOUNDS is returned.
+     * If the placement is "bad"--interfering with existing blocks in the
+     * grid--then the placement is halted partially complete and PLACE_BAD
+     * is returned.
+     * 
+     * @param piece for the piece thats being placed
+     * 
+     * @param location for the point the piece will be placed
+     * 
+     * @return int for determing if the location is out of bounds, ok, 
+     * bad, or fills a row
+     */
+    public int place(Piece piece, Point location)
+    {
+        Point[] body = piece.getBody();
+        int result = Board.PLACE_OK;
+        for ( int i = 0; i < body.length; i++)
+        {
+            int x = location.getX() + body[i].getX();
+            int y = location.getY() + body[i].getY();
+            boolean outOfWidth = x < 0 || x >= getWidth();
+            boolean outOfHeight = y < 0 || y >= getHeight();
+            
+            if (outOfWidth || outOfHeight)
+            {
+                result =  Board.PLACE_OUT_BOUNDS;
+                break;
+            }
+            if (hasBlockAt(location))
+            {
+                result = Board.PLACE_BAD;
+                break;
+            }
+            
+            
+                grid[x][y] = true;
+                if ( columnHeights[x] < y + 1 )
+                {
+                    columnHeights[x] = y + 1;
+                }
+                blocksInAllRows[y]++;
+            
+            if ( clearRows() == true )
+            {
+                result =  Board.PLACE_ROW_FILLED;
+            }
+        }
+        return result;
+    }
+
+    /**
+     * Deletes rows that are filled all the way across, moving
+     * things above down. Returns true if any row clearing happened.
+     * 
+     * @return boolean True if row is cleared or false if row is not cleared
+     */
+    public boolean clearRows()
+    {
+        int rowsCleared = 0;
+        for (int y = 0; y < getHeight(); y++)
+        {
+            for (int x = 0; x < getWidth(); x++)
+            {
+                Point point = new Point(x, y);
+                if (!hasBlockAt(point) )
+                {
+                    break;
+                }
+                else if (blocksInAllRows[y] == getWidth())
+                {
+                    for (int i = x; i < getWidth() - 1; i++) 
+                    {
+                        for (int j = 0; j < y; j++) 
+                        {
+                            grid[i][j] = grid[i + 1][j];
+                        }
+                    }
+
+                    for (int k = 0; k < getWidth(); k++) 
+                    {
+                        grid[k][height - 1] = false;
+                    }
+                    rowsCleared++;
+                }
+            }
+        }
+        
+        // if rowsCleared == 0 return false , if not return true
+        return rowsCleared == 0 ? false : true;
+    }
+
+    /**
+     * Returns the two-dimensional array representing the current state
+     * of the board.
+     * 
+     * @return a 2D array representing all of the locations on the board.
+     */
+    public boolean[][] getGrid()
+    {
+        return grid;
+    }
+}
